@@ -7,6 +7,7 @@ import tkinter.filedialog
 from pymisp import PyMISP
 from email.parser import Parser
 from email.message import EmailMessage
+from secure_storage import generate_key, encrypt_data, decrypt_data, save_encrypted_data, load_encrypted_data
 import tkinter as tk
 from tkinter import ttk
 
@@ -20,6 +21,38 @@ class MISPDesktopApp(tk.Tk):
         super().__init__()
         self.title("PyMISP Desktop Application")
         self.create_widgets()
+        
+    def open_api_config_window(self):
+        self.api_config_window = tk.Toplevel(self)
+        self.api_config_window.title("API Configuration")
+
+        # API URL
+        self.api_url_label = tk.Label(self.api_config_window, text="API URL:")
+        self.api_url_label.grid(row=0, column=0, padx=5, pady=5)
+        self.api_url_entry = tk.Entry(self.api_config_window, width=50)
+        self.api_url_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        # API Key
+        self.api_key_label = tk.Label(self.api_config_window, text="API Key:")
+        self.api_key_label.grid(row=1, column=0, padx=5, pady=5)
+        self.api_key_entry = tk.Entry(self.api_config_window, width=50)
+        self.api_key_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        # Save Button
+        self.save_api_button = tk.Button(self.api_config_window, text="Save", command=self.save_api_credentials)
+        self.save_api_button.grid(row=2, column=0, columnspan=2, padx=5, pady=10)
+
+    def save_api_credentials(self):
+        MISP_URL = self.api_url_entry.get()
+        MISP_KEY = self.api_key_entry.get()
+        # Save the credentials as needed, e.g., to a file or in-memory storage
+        print(f"Saved URL: {MISP_URL}, Key: {MISP_KEY}")
+        
+        
+    def create_settings_widgets(self):
+    # API Configuration Button
+        self.api_config_button = tk.Button(self.settings_frame, text="API Configuration", command=self.open_api_config_window)
+        self.api_config_button.grid(row=0, column=0, padx=5, pady=10)
 
     def create_widgets(self):
         # Create a Notebook
@@ -31,11 +64,13 @@ class MISPDesktopApp(tk.Tk):
         self.search_frame = ttk.Frame(self.notebook)
         self.upload_frame = ttk.Frame(self.notebook)
         self.attribute_frame = ttk.Frame(self.notebook)
+        self.settings_frame = ttk.Frame(self.notebook)
 
         # Add frames to the notebook
         self.notebook.add(self.event_frame, text='Event')
         self.notebook.add(self.search_frame, text='Search')
         self.notebook.add(self.attribute_frame, text='Attribute')
+        self.notebook.add(self.settings_frame, text='Settings')
 
     # Configure the notebook to expand the frames
         self.notebook.grid_rowconfigure(0, weight=1)
@@ -46,6 +81,7 @@ class MISPDesktopApp(tk.Tk):
         self.create_search_widgets()
         self.create_attribute_widgets()
         self.uploadtab()
+        self.create_settings_widgets()
         
     def create_attribute_widgets(self):
     # Attribute form
@@ -254,10 +290,10 @@ class MISPDesktopApp(tk.Tk):
     def upload_msg(self):
         # Open a file dialog to select the .msg file
         file_path = tk.filedialog.askopenfilename(filetypes=[("MSG files", "*.msg")])
+        print("Selected file path:", file_path)  # Debugging line
 
         # Use extract_msg to open the .msg file
         msg = extract_msg.Message(file_path)
-
         # Extract the headers, body, and recipients
         headers_list = []
         for key, value in msg.header.items():
@@ -273,6 +309,15 @@ class MISPDesktopApp(tk.Tk):
         self.body_text.insert(tk.END, body)
         self.recipients_text.delete(1.0, tk.END)
         self.recipients_text.insert(tk.END, recipients)
+
+password = b"password" # Get this from the user
+key, salt = generate_key(password)
+encrypted_api_key = encrypt_data(b"API_KEY_HERE", key)
+save_encrypted_data('credentials.enc', encrypted_api_key)
+
+# Later, when you need the credentials
+encrypted_data = load_encrypted_data('credentials.enc')
+api_key = decrypt_data(encrypted_data, key)
 
 
 
